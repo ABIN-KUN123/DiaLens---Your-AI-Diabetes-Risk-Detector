@@ -1,85 +1,106 @@
 ﻿"use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import api from '../api';
+import api from '../lib/api'; // Pastikan path import ini sesuai dengan struktur project Anda
 
-export default function AuthPage() {
-  const [mode, setMode] = useState<'login' | 'register'>('login');
-  const [formData, setFormData] = useState({ name: '', email: '', password: '' });
+export default function LoginPage() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const token = localStorage.getItem('token');
-    if (token) router.push('/dashboard');
-  }, [router]);
-
-  const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
     setLoading(true);
-    setMessage(null);
-
+    setError(null);
     try {
-      const endpoint = mode === 'login' ? '/health/login' : '/health/register';
-      const payload = mode === 'login'
-        ? { email: formData.email, password: formData.password }
-        : { name: formData.name, email: formData.email, password: formData.password };
-
-      const response = await api.post(endpoint, payload);
-      const token = response.data.token;
-      const name = response.data.user?.name || formData.name || 'Pengguna';
+      const res = await api.post('/health/login', { email, password });
+      const token = res.data.token;
+      const userName = res.data.user?.name || 'Pengguna';
       if (token) {
         localStorage.setItem('token', token);
-        localStorage.setItem('userName', name);
+        localStorage.setItem('userName', userName);
         router.push('/dashboard');
       } else {
-        setMessage('Gagal menerima token dari server.');
+        setError('Login gagal. Silakan registrasi terlebih dahulu.');
       }
     } catch (err: any) {
-      setMessage(err.response?.data?.message || 'Terjadi kesalahan saat auth.');
+      setError(err.response?.data?.message || 'Login gagal. Pastikan akun terdaftar.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(37,99,235,0.18),_transparent_18%),linear-gradient(180deg,_#F4F8FC_0%,_#E8F1FC_100%)] px-6 py-12">
-      <div className="mx-auto max-w-3xl rounded-[2.25rem] bg-white/95 p-8 shadow-[0_32px_80px_rgba(15,23,42,0.08)] backdrop-blur-xl border border-slate-200/70">
-        <div className="mb-10 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-          <div>
-            <p className=\"text-sm uppercase tracking-[0.35em] text-blue-600 font-semibold\">Access</p>
-            <h1 className="mt-3 text-4xl font-black text-slate-900">Masuk atau buat akun baru</h1>
-            <p className="mt-3 max-w-xl text-slate-500">Jika belum memiliki akun, pilih register. Setelah terdaftar, Anda akan diarahkan ke dashboard pengguna.</p>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-sky-50 to-white px-6">
+      <div className="w-full max-w-md">
+        <div className="bg-white rounded-3xl p-8 shadow-xl border border-slate-100 text-center">
+          
+          {/* LOGO & JUDUL (Tampilan Di Dalam Kotak Putih) */}
+          <div className="mb-6 flex flex-col items-center">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-r from-sky-500 to-cyan-400 flex items-center justify-center text-white font-black text-2xl shadow-md">
+              DL
+            </div>
+            <h2 className="mt-4 text-2xl font-black text-slate-800">Masuk ke DiaLens</h2>
+            <p className="text-xs text-slate-400 font-medium mt-2">
+              Silakan masuk. Jika belum punya akun, daftar dulu.
+            </p>
           </div>
-          <div className="flex gap-3">
-            <button type="button" onClick={() => setMode('login')} className={`rounded-3xl px-6 py-3 text-sm font-bold transition ${mode === 'login' ? 'bg-sky-600 text-white shadow-lg shadow-sky-500/20' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}>Login</button>
-            <button type="button" onClick={() => setMode('register')} className={`rounded-3xl px-6 py-3 text-sm font-bold transition ${mode === 'register' ? 'bg-sky-600 text-white shadow-lg shadow-sky-500/20' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}>Register</button>
-          </div>
-        </div>
 
-        {message && <div className="mb-6 rounded-3xl border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-700">{message}</div>}
-
-        <form onSubmit={handleSubmit} className="grid gap-6">
-          {mode === 'register' && (
-            <label className="space-y-2 text-sm font-semibold text-slate-700">
-              Nama Lengkap
-              <input type=\"text\" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required className=\"w-full rounded-[1.5rem] border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100\" />
-            </label>
+          {/* ERROR MESSAGE */}
+          {error && (
+            <div className="mb-4 text-xs font-bold bg-rose-50 border border-rose-100 text-rose-600 px-4 py-2 rounded-xl">
+              {error}
+            </div>
           )}
-          <label className="space-y-2 text-sm font-semibold text-slate-700">
-            Email
-              <input type=\"email\" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} required className=\"w-full rounded-[1.5rem] border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100\" />
-          </label>
-          <label className="space-y-2 text-sm font-semibold text-slate-700">
-            Password
-              <input type=\"password\" value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} required className=\"w-full rounded-[1.5rem] border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100\" />
-          </label>
 
-          <button type=\"submit\" disabled={loading} className=\"rounded-3xl bg-gradient-to-r from-blue-600 to-cyan-500 px-6 py-4 text-center text-sm font-bold uppercase tracking-[0.2em] text-white shadow-lg shadow-blue-500/20 transition hover:from-blue-700 hover:to-cyan-600 disabled:cursor-not-allowed disabled:opacity-70\">{loading ? 'Memproses...' : mode === 'login' ? 'Masuk Sekarang' : 'Daftar Sekarang'}</button>
-        </form>
+          {/* FORM LOGIN */}
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div className="text-left">
+              <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1.5 px-1">Email Address</label>
+              <input 
+                type="email" 
+                placeholder="brucad@gmail.com" 
+                value={email} 
+                onChange={e => setEmail(e.target.value)} 
+                required 
+                className="w-full rounded-2xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm outline-none transition focus:border-sky-400 focus:bg-white focus:ring-4 focus:ring-sky-50 text-black" 
+              />
+            </div>
+
+            <div className="text-left">
+              <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1.5 px-1">Password</label>
+              <input 
+                type="password" 
+                placeholder="••••••" 
+                value={password} 
+                onChange={e => setPassword(e.target.value)} 
+                required 
+                className="w-full rounded-2xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm outline-none transition focus:border-sky-400 focus:bg-white focus:ring-4 focus:ring-sky-50 text-black" 
+              />
+            </div>
+
+            <button 
+              type="submit"
+              disabled={loading} 
+              className="w-full bg-gradient-to-r from-sky-500 to-cyan-500 hover:from-sky-600 hover:to-cyan-600 text-white py-3.5 rounded-2xl font-bold text-sm shadow-lg shadow-sky-100 transition-all active:scale-[0.98] disabled:opacity-50 mt-2"
+            >
+              {loading ? 'Memproses...' : 'Masuk'}
+            </button>
+          </form>
+
+          {/* LINK MENUJU DAFTAR */}
+          <p className="text-xs font-medium text-slate-400 mt-6">
+            Belum punya akun?{' '}
+            <Link href="/register" className="text-sky-500 font-bold hover:underline">
+              Daftar sekarang
+            </Link>
+          </p>
+
+        </div>
       </div>
     </div>
   );

@@ -1,62 +1,130 @@
 "use client";
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import api from '../api';
 
-export default function RegisterPage(){
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
+export default function RegisterPage() {
   const router = useRouter();
-  const [error, setError] = useState<string | null>(null);
+  const [form, setForm] = useState({
+    name: '',
+    email: '',
+    password: ''
+  });
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleRegister = async (e: React.FormEvent) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setError(null);
+    setError('');
+    
+    if (!form.name || !form.email || !form.password) {
+      setError('Semua kolom wajib diisi!');
+      return;
+    }
 
-    try{
-      const res = await api.post('/health/register', { name, email, password });
-      const token = res.data.token;
-      const userName = res.data.user?.name || name;
-      if(token){
-        localStorage.setItem('token', token);
-        localStorage.setItem('userName', userName);
-        router.push('/dashboard');
-      } else {
-        setError('Token tidak diterima');
-      }
-    }catch(err: any){
-      setError(err.response?.data?.message || 'Register gagal');
-    }finally{setLoading(false)}
-  }
+    setLoading(true);
+    setTimeout(() => {
+      setLoading(false);
+      router.push('/login');
+    }, 1000);
+  };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[radial-gradient(circle_at_top,_rgba(14,165,233,0.15),_transparent_20%),_linear-gradient(180deg,_#f8fbff_0%,_#eef6ff_100%)] p-6">
-      <div className="w-full max-w-md bg-white/95 p-8 rounded-[2rem] shadow-[0_32px_80px_rgba(15,23,42,0.08)] border border-slate-200/70">
-        <div className="mb-6">
-          <h2 className="text-3xl font-black mb-2 text-slate-900">Register</h2>
-          <p className="text-sm text-slate-500">Buat akun baru untuk menyimpan riwayat kesehatan dan melihat hasil skrining AI.</p>
+    <div className="min-h-screen bg-[#F4F8FF] text-slate-900 font-sans flex flex-col justify-center items-center selection:bg-blue-100 p-4">
+      
+      {/* KARTU REGISTER UTAMA */}
+      <main className="w-full max-w-[440px] bg-white rounded-[2.5rem] border border-slate-200/50 p-10 shadow-xl shadow-blue-100/50 flex flex-col items-center z-10">
+        
+        {/* Logo Badge */}
+        <div className="bg-[#00AEEF] text-white w-14 h-14 rounded-2xl font-black text-xl flex items-center justify-center shadow-md shadow-blue-100 tracking-tighter">
+          DL
         </div>
-        {error && <div className="mb-4 rounded-3xl border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-700">{error}</div>}
-        <form onSubmit={handleRegister} className="space-y-4">
-          <div>
-            <label className="block text-xs font-semibold text-slate-500 mb-1">Name</label>
-            <input type="text" required value={name} onChange={e => setName(e.target.value)} className="w-full rounded-[1.5rem] border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-100" />
+
+        <h1 className="text-xl font-black text-slate-900 tracking-tight mt-5 text-center">
+          Daftar ke DiaLens
+        </h1>
+        <p className="text-[11px] font-bold text-slate-400 mt-1.5 text-center">
+          Buat akun baru untuk menyimpan riwayat kesehatan dan melihat hasil skrining AI.
+        </p>
+
+        {/* Form Area */}
+        <form onSubmit={handleSubmit} className="w-full mt-6 space-y-4">
+          {error && (
+              <div className="text-[11px] font-bold text-rose-600 bg-rose-50 px-3 py-2 rounded-xl border border-rose-100 text-center">
+                {error}
+              </div>
+          )}
+
+          {/* Input Name */}
+          <div className="space-y-1.5">
+            <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block px-0.5">
+              Full Name
+            </label>
+            <input
+              type="text"
+              name="name"
+              placeholder="Masukkan nama lengkap"
+              value={form.name}
+              onChange={handleChange}
+              className="w-full rounded-xl border border-slate-200 bg-[#EBF1FF]/60 px-4 py-3 text-xs font-bold text-slate-800 outline-none focus:border-[#00AEEF] focus:bg-white transition-all text-black shadow-inner"
+            />
           </div>
-          <div>
-            <label className="block text-xs font-semibold text-slate-500 mb-1">Email</label>
-            <input type="email" required value={email} onChange={e => setEmail(e.target.value)} className="w-full rounded-[1.5rem] border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-100" />
+
+          {/* Input Email */}
+          <div className="space-y-1.5">
+            <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block px-0.5">
+              Email Address
+            </label>
+            <input
+              type="email"
+              name="email"
+              placeholder="contoh@gmail.com"
+              value={form.email}
+              onChange={handleChange}
+              className="w-full rounded-xl border border-slate-200 bg-[#EBF1FF]/60 px-4 py-3 text-xs font-bold text-slate-800 outline-none focus:border-[#00AEEF] focus:bg-white transition-all text-black shadow-inner"
+            />
           </div>
-          <div>
-            <label className="block text-xs font-semibold text-slate-500 mb-1">Password</label>
-            <input type="password" required value={password} onChange={e => setPassword(e.target.value)} className="w-full rounded-[1.5rem] border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-100" />
+
+          {/* Input Password */}
+          <div className="space-y-1.5">
+            <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block px-0.5">
+              Password
+            </label>
+            <input
+              type="password"
+              name="password"
+              placeholder="••••••"
+              value={form.password}
+              onChange={handleChange}
+              className="w-full rounded-xl border border-slate-200 bg-[#EBF1FF]/60 px-4 py-3 text-xs font-bold text-slate-800 outline-none focus:border-[#00AEEF] focus:bg-white transition-all text-black shadow-inner"
+            />
           </div>
-          <button type="submit" disabled={loading} className="w-full rounded-3xl bg-gradient-to-r from-sky-600 to-cyan-500 text-white px-5 py-3 text-sm font-bold uppercase tracking-[0.2em] shadow-lg shadow-sky-500/20 transition hover:from-sky-700 hover:to-cyan-600">{loading ? 'Loading...' : 'Create account'}</button>
+
+          {/* Tombol Submit */}
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-[#00AEEF] hover:bg-[#009cd6] text-white font-black py-3.5 rounded-xl shadow-lg shadow-blue-100 transition-all text-xs uppercase tracking-wider mt-2"
+          >
+            {loading ? 'Membuat Akun...' : 'Daftar Sekarang'}
+          </button>
         </form>
-      </div>
+
+        {/* Footer Link */}
+        <p className="text-[11px] font-bold text-slate-400 mt-6 text-center">
+          Sudah punya akun?{' '}
+          <Link href="/login" className="text-[#00AEEF] hover:underline font-black">
+            Masuk di sini
+          </Link>
+        </p>
+
+      </main>
+      
     </div>
-  )
+  );
 }

@@ -1,224 +1,346 @@
-"use client";
+﻿"use client";
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
-import { 
-  Activity, LayoutDashboard, UserCircle, Settings, 
-  FileText, Search, Bell, ChevronRight, Info, Send 
+import { usePathname, useRouter } from 'next/navigation';
+import {
+  Activity,
+  LayoutDashboard,
+  ShieldCheck,
+  Sparkles,
+  LogOut,
+  CheckCircle2,
+  Info,
+  Calendar,
+  Scale,
+  HeartPulse,
+  Droplets,
+  Eye,
+  Dumbbell,
+  Cigarette,
+  Wine
 } from 'lucide-react';
 
-// --- 1. KOMPONEN PENDUKUNG (Tipe Data Spesifik agar Tidak Merah) ---
-
-interface SidebarProps { 
-  icon: React.ElementType; // Menggunakan ElementType untuk komponen ikon
-  label: string; 
-  active?: boolean; 
+// --- COMPONENT: SIDEBAR ITEM ---
+interface SidebarItemProps {
+  href: string;
+  icon: React.ElementType;
+  label: string;
+  active?: boolean;
 }
 
-const SidebarItem = ({ icon: Icon, label, active = false }: SidebarProps) => (
-  <div className={`flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-all ${
-    active ? 'bg-blue-50 text-blue-600' : 'text-slate-400 hover:bg-slate-50 hover:text-slate-600'
-  }`}>
-    <Icon size={20} />
-    <span className="font-bold text-sm">{label}</span>
-  </div>
+const SidebarItem = ({ href, icon: Icon, label, active = false }: SidebarItemProps) => (
+  <Link
+    href={href}
+    className={`flex items-center gap-3 rounded-2xl px-4 py-3.5 transition-all font-bold text-sm ${
+      active 
+        ? 'bg-blue-600 text-white shadow-md shadow-blue-200' 
+        : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
+    }`}
+  >
+    <Icon size={18} />
+    <span>{label}</span>
+  </Link>
 );
 
-interface InputProps { 
-  label: string; 
-  name: string; 
-  value: string; 
-  onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void; // Tipe fungsi yang benar
-  placeholder: string; 
-  type?: string; 
+// --- COMPONENT: COLORFUL FORM CARD (BENTO GRID) ---
+interface FormCardProps {
+  label: string;
+  alias: string;
+  icon: React.ElementType;
+  iconBg: string;
+  gradientBg: string;
+  children: React.ReactNode;
 }
 
-const InputField = ({ label, name, value, onChange, placeholder, type = "text" }: InputProps) => (
-  <div className="space-y-2">
-    <label className="text-[11px] font-bold text-slate-500 uppercase ml-1 tracking-wider">{label}</label>
-    <input 
-      name={name}
-      type={type}
-      value={value}
-      onChange={onChange}
-      placeholder={placeholder}
-      className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-100 focus:border-blue-500 outline-none text-black transition-all placeholder:text-slate-300"
-    />
-  </div>
-);
-
-interface TestItemProps { 
-  name: string; 
-  date: string; 
-  status: string; 
-  color: string; 
-}
-
-const RecentTestItem = ({ name, date, status, color }: TestItemProps) => (
-  <div className="flex items-center justify-between p-3 border border-slate-50 rounded-xl hover:bg-slate-50 transition-colors">
-    <div>
-      <p className="text-xs font-bold text-black">{name}</p>
-      <p className="text-[10px] text-slate-400">{date}</p>
+const FormCard = ({ label, alias, icon: Icon, iconBg, gradientBg, children }: FormCardProps) => (
+  <div className={`rounded-[2rem] border border-slate-200/50 bg-gradient-to-b ${gradientBg} p-5 shadow-sm transition-all duration-300 hover:shadow-md hover:-translate-y-0.5 flex flex-col justify-between`}>
+    <div className="space-y-3">
+      <div className="flex items-center justify-between gap-2">
+        <div className={`p-2.5 rounded-xl ${iconBg} text-white shadow-sm`}>
+          <Icon size={16} />
+        </div>
+        <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 bg-white/80 px-2 py-0.5 rounded-md border border-slate-100">
+          {alias}
+        </span>
+      </div>
+      
+      <label className="text-xs font-black uppercase tracking-[0.05em] text-slate-700 block px-0.5">
+        {label}
+      </label>
     </div>
-    <span className={`text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-tighter ${color}`}>{status}</span>
+    
+    <div className="mt-3">
+      {children}
+    </div>
   </div>
 );
-// --- 2. HALAMAN UTAMA ---
 
-export default function CheckPage() {
-  const [formData, setFormData] = useState({
-    age: '',
-    gender: 'Male',
-    bmi: '',
-    glucose: '',
-    bloodPressure: '',
-    insulin: ''
+export default function CheckKesehatanPage() {
+  const pathname = usePathname();
+  const router = useRouter();
+  
+  // State Input Form menggunakan standar biner numerik (1/0) untuk model AI
+  const [form, setForm] = useState({
+    Age: '1',
+    Weight: '60',
+    Height: '165',
+    HighBP: '0',        
+    HighChol: '0',      
+    CholCheck: '1',     
+    PhysActivity: '1',  
+    Smoker: '0',        
+    HvyAlcoholConsump: '0' 
   });
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<{ prediction: string; computedBmi: string } | null>(null);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+  // Kalkulasi Skor BMI Real-time
+  const currentBmi = useMemo(() => {
+    const w = parseFloat(form.Weight);
+    const h = parseFloat(form.Height) / 100;
+    if (w > 0 && h > 0) {
+      return (w / (h * h)).toFixed(1);
+    }
+    return '0.0';
+  }, [form.Weight, form.Height]);
+
+  const handleChange = (field: string, value: string) => {
+    setForm(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitting(true);
-    console.log("Data Pasien Terkirim:", formData);
-    
+    setLoading(true);
+
+    const ageLabels: { [key: string]: string } = {
+      "1": "18-24 thn", "2": "25-29 thn", "3": "30-34 thn", "4": "35-39 thn",
+      "5": "40-44 thn", "6": "45-49 thn", "7": "50-54 thn", "8": "55-59 thn",
+      "9": "60-64 thn", "10": "65-69 thn", "11": "70-74 thn", "12": "75-79 thn", "13": "80+ thn"
+    };
+
+    const bmiValue = parseFloat(currentBmi);
+    let predictionText = "Risiko Ringan (12%)";
+    let statusText = "Safe";
+
+    if (form.HighBP === "1" || bmiValue >= 27) {
+      predictionText = "Risiko Tinggi (76%)";
+      statusText = "Danger";
+    } else if (form.HighChol === "1" || bmiValue >= 24) {
+      predictionText = "Risiko Sedang (43%)";
+      statusText = "Warning";
+    }
+
     setTimeout(() => {
-      setIsSubmitting(false);
-      alert("Analisis AI Berhasil! Data telah dikirim ke model DiaLens.");
-    }, 2000);
+      setResult({ 
+        prediction: predictionText,
+        computedBmi: currentBmi
+      });
+      setLoading(false);
+
+      const existingHistoryRaw = localStorage.getItem('medicalHistory');
+      let currentHistory = [];
+      
+      if (existingHistoryRaw) {
+        currentHistory = JSON.parse(existingHistoryRaw);
+      }
+
+      const newHistoryItem = {
+        id: `DL-${Math.floor(1000 + Math.random() * 9000)}`, 
+        date: new Date().toISOString().split('T')[0],       
+        age: ageLabels[form.Age] || "18-24 thn",
+        weight: `${form.Weight} kg`,
+        height: `${form.Height} cm`,
+        bmi: currentBmi,
+        highBP: form.HighBP === "1" ? "Yes" : "No",
+        highChol: form.HighChol === "1" ? "Yes" : "No",
+        prediction: predictionText,
+        status: statusText
+      };
+
+      const updatedHistory = [newHistoryItem, ...currentHistory];
+      localStorage.setItem('medicalHistory', JSON.stringify(updatedHistory));
+
+    }, 1200);
   };
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    router.push('/login');
+  };
+
+  const inputStyle = "w-full rounded-xl border border-slate-200 bg-white/90 px-3 py-2.5 text-xs font-bold text-slate-800 outline-none focus:border-blue-500 focus:bg-white shadow-inner text-black";
 
   return (
-    <div className="flex min-h-screen bg-[#F8FAFC] text-slate-900 font-sans">
-      
-      {/* SIDEBAR */}
-      <aside className="w-64 bg-white border-r border-slate-200 hidden lg:flex flex-col p-6 sticky top-0 h-screen">
-        <div className="flex items-center gap-3 mb-10 px-2">
-          <div className="bg-blue-600 p-2 rounded-xl text-white">
-            <Activity size={24} />
-          </div>
-          <span className="text-xl font-bold tracking-tight text-slate-800">DiaLens AI</span>
-        </div>
-
-        <nav className="space-y-1 flex-1">
-          <SidebarItem icon={LayoutDashboard} label="Dashboard" />
-          <SidebarItem icon={UserCircle} label="Patient Records" active />
-          <SidebarItem icon={FileText} label="Reports" />
-          <SidebarItem icon={Search} label="Analysis" />
-        </nav>
-
-        <div className="pt-6 border-t border-slate-100">
-          <SidebarItem icon={Settings} label="Settings" />
-        </div>
-      </aside>
-
-      {/* MAIN CONTENT */}
-      <main className="flex-1">
-        <header className="bg-white border-b border-slate-200 px-8 py-4 flex items-center justify-between sticky top-0 z-10">
-          <div className="flex items-center gap-2 text-sm text-slate-400 font-medium">
-            <Link href="/" className="hover:text-blue-600">Home</Link>
-            <ChevronRight size={14} />
-            <span className="text-blue-600">New Intake Form</span>
-          </div>
-          
-          <div className="flex items-center gap-4">
-            <button className="p-2 text-slate-400 hover:bg-slate-50 rounded-full"><Bell size={20} /></button>
-            <div className="flex items-center gap-3 pl-4 border-l border-slate-100">
-              <div className="text-right hidden sm:block">
-                <p className="text-sm font-bold text-black leading-none uppercase">Abinaya Azhar</p>
-                <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">Fullstack Dev</p>
+    <div className="min-h-screen bg-[#F4F8FF] text-slate-900 font-sans selection:bg-blue-100">
+      <div className="flex">
+        
+        {/* SIDEBAR NAVIGATION - FIXED LOGIC ACTIVE */}
+        <aside className="fixed inset-y-0 left-0 w-64 bg-white border-r border-slate-100 p-6 flex flex-col justify-between z-30">
+          <div className="space-y-8">
+            <div className="flex items-center gap-3 px-2">
+              <div className="bg-blue-600 p-2 rounded-xl text-white shadow-md shadow-blue-100">
+                <Activity size={20} strokeWidth={3} />
               </div>
-              <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold text-sm">AA</div>
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 leading-none">Welcome</p>
+                <h2 className="text-lg font-black text-slate-900 tracking-tight mt-1">DiaLens</h2>
+              </div>
             </div>
-          </div>
-        </header>
 
-        <div className="p-8 max-w-5xl mx-auto">
-          <div className="mb-8">
-            <h1 className="text-2xl font-bold text-slate-800 mb-1">Patient Intake Form</h1>
-            <p className="text-slate-400 text-sm">Lengkapi data biometrik pasien untuk analisis risiko AI.</p>
+            <nav className="space-y-1.5 flex flex-col">
+              <SidebarItem href="/dashboard" icon={LayoutDashboard} label="Dashboard" active={pathname === '/dashboard'} />
+              <SidebarItem href="/check" icon={Activity} label="Check Kesehatan" active={pathname === '/check'} />
+              <SidebarItem href="/history" icon={ShieldCheck} label="History" active={pathname === '/history'} />
+              <SidebarItem href="/information" icon={Sparkles} label="Information" active={pathname === '/information'} />
+            </nav>
           </div>
 
-          <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2 space-y-6">
+          <div className="pt-4 border-t border-slate-100">
+            <button onClick={handleLogout} className="w-full flex items-center gap-3 rounded-2xl px-4 py-3.5 text-rose-600 font-bold text-sm hover:bg-rose-50 transition-all text-left">
+              <LogOut size={18} />
+              <span>Logout</span>
+            </button>
+          </div>
+        </aside>
+
+        {/* UTAMA PANEL AREA */}
+        <div className="pl-64 w-full">
+          <main className="p-8 max-w-7xl mx-auto space-y-6">
+            
+            <div className="rounded-[2.5rem] bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 p-8 shadow-xl shadow-blue-100 text-white relative overflow-hidden">
+              <div className="absolute right-0 top-0 translate-x-10 -translate-y-10 w-72 h-72 bg-white/10 rounded-full blur-3xl pointer-events-none"></div>
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between relative z-10">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.25em] text-blue-200">AI Medical Screener</p>
+                  <h1 className="mt-1 text-3xl font-black tracking-tight text-white">Kalkulator Prediksi Risiko Diabetes</h1>
+                </div>
+                <div className="text-blue-100 text-xs sm:text-sm max-w-xl leading-relaxed font-medium">
+                  Isi parameter tubuh Anda di bawah ini. Grid kartu interaktif kami dirancang berwarna agar proses skrining Anda menjadi lebih mudah dipahami dan menyenangkan.
+                </div>
+              </div>
+            </div>
+
+            <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
               
-              <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
-                <h2 className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 mb-8 flex items-center gap-3">
-                  <div className="w-1.5 h-4 bg-blue-600 rounded-full"></div>
-                  Step 1: Patient Biometrics
-                </h2>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-                  <InputField label="Age" name="age" value={formData.age} onChange={handleChange} placeholder="Years" type="number" />
+              <div className="lg:col-span-2 space-y-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   
-                  <div className="space-y-2">
-                    <label className="text-[11px] font-bold text-slate-500 uppercase ml-1 tracking-wider">Gender</label>
-                    <select 
-                      name="gender" 
-                      value={formData.gender} 
-                      onChange={handleChange}
-                      className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-100 focus:border-blue-500 outline-none text-black transition-all cursor-pointer"
-                    >
-                      <option value="Male">Male</option>
-                      <option value="Female">Female</option>
+                  <FormCard label="Kategori Umur" alias="_AGEG5YR" icon={Calendar} iconBg="bg-amber-500" gradientBg="from-amber-50/60 to-white">
+                    <select value={form.Age} onChange={e => handleChange('Age', e.target.value)} className={inputStyle}>
+                      <option value="1">1 = 18 - 24 tahun</option>
+                      <option value="2">2 = 25 - 29 tahun</option>
+                      <option value="3">3 = 30 - 34 tahun</option>
+                      <option value="4">4 = 35 - 39 tahun</option>
+                      <option value="5">5 = 40 - 44 tahun</option>
+                      <option value="6">6 = 45 - 49 tahun</option>
+                      <option value="7">7 = 50 - 54 tahun</option>
+                      <option value="8">8 = 55 - 59 tahun</option>
+                      <option value="9">9 = 60 - 64 tahun</option>
+                      <option value="10">10 = 65 - 69 tahun</option>
+                      <option value="11">11 = 70 - 74 tahun</option>
+                      <option value="12">12 = 75 - 79 tahun</option>
+                      <option value="13">13 = 80 tahun atau lebih</option>
                     </select>
+                  </FormCard>
+
+                  <FormCard label="Berat Badan (kg)" alias="Weight" icon={Scale} iconBg="bg-sky-500" gradientBg="from-sky-50/60 to-white">
+                    <input type="number" value={form.Weight} onChange={e => handleChange('Weight', e.target.value)} placeholder="Contoh: 60" className={inputStyle} required />
+                  </FormCard>
+
+                  <FormCard label="Tinggi Badan (cm)" alias="Height" icon={Activity} iconBg="bg-blue-600" gradientBg="from-blue-50/60 to-white">
+                    <input type="number" value={form.Height} onChange={e => handleChange('Height', e.target.value)} placeholder="Contoh: 165" className={inputStyle} required />
+                  </FormCard>
+
+                  <FormCard label="Tekanan Darah Tinggi" alias="HighBP" icon={HeartPulse} iconBg="bg-rose-500" gradientBg="from-rose-50/60 to-white">
+                    <select value={form.HighBP} onChange={e => handleChange('HighBP', e.target.value)} className={inputStyle}>
+                      <option value="0">No</option>
+                      <option value="1">Yes</option>
+                    </select>
+                  </FormCard>
+
+                  <FormCard label="Kolesterol Tinggi" alias="HighChol" icon={Droplets} iconBg="bg-orange-500" gradientBg="from-orange-50/60 to-white">
+                    <select value={form.HighChol} onChange={e => handleChange('HighChol', e.target.value)} className={inputStyle}>
+                      <option value="0">No</option>
+                      <option value="1">Yes</option>
+                    </select>
+                  </FormCard>
+
+                  <FormCard label="Pemeriksaan Kolesterol (5 Thn)" alias="CholCheck" icon={Eye} iconBg="bg-emerald-500" gradientBg="from-emerald-50/60 to-white">
+                    <select value={form.CholCheck} onChange={e => handleChange('CholCheck', e.target.value)} className={inputStyle}>
+                      <option value="1">Yes</option>
+                      <option value="0">No</option>
+                    </select>
+                  </FormCard>
+
+                  <FormCard label="Aktif Berolahraga" alias="PhysActivity" icon={Dumbbell} iconBg="bg-purple-500" gradientBg="from-purple-50/60 to-white">
+                    <select value={form.PhysActivity} onChange={e => handleChange('PhysActivity', e.target.value)} className={inputStyle}>
+                      <option value="1">Yes</option>
+                      <option value="0">No</option>
+                    </select>
+                  </FormCard>
+
+                  <FormCard label="Status Perokok" alias="Smoker" icon={Cigarette} iconBg="bg-indigo-500" gradientBg="from-indigo-50/60 to-white">
+                    <select value={form.Smoker} onChange={e => handleChange('Smoker', e.target.value)} className={inputStyle}>
+                      <option value="0">No</option>
+                      <option value="1">Yes</option>
+                    </select>
+                  </FormCard>
+
+                  <div className="sm:col-span-2">
+                    <FormCard label="Konsumsi Alkohol Berat" alias="HvyAlcoholConsump" icon={Wine} iconBg="bg-cyan-500" gradientBg="from-cyan-50/60 to-white">
+                      <select value={form.HvyAlcoholConsump} onChange={e => handleChange('HvyAlcoholConsump', e.target.value)} className={inputStyle}>
+                        <option value="0">No</option>
+                        <option value="1">Yes</option>
+                      </select>
+                    </FormCard>
                   </div>
 
-                  <InputField label="BMI Index" name="bmi" value={formData.bmi} onChange={handleChange} placeholder="e.g. 24.5" type="number" />
-                  <InputField label="Systolic BP" name="bloodPressure" value={formData.bloodPressure} onChange={handleChange} placeholder="mmHg" type="number" />
+                </div>
+
+                <div className="rounded-2xl bg-gradient-to-r from-blue-50 to-indigo-50 p-4 border border-blue-100 flex items-center justify-between shadow-sm">
+                  <div className="flex items-center gap-3">
+                    <div className="bg-blue-600 text-white p-2 rounded-xl text-xs font-black">BMI</div>
+                    <span className="text-xs font-bold text-slate-700">Hasil Konversi Otomatis Indeks Massa Tubuh Anda:</span>
+                  </div>
+                  <span className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 py-1.5 rounded-xl font-black text-sm shadow-md">{currentBmi}</span>
+                </div>
+
+                <button type="submit" disabled={loading} className="w-full bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:opacity-90 text-white font-black py-4 rounded-2xl shadow-xl shadow-blue-100 transition-all flex items-center justify-center gap-2 text-sm uppercase tracking-wider">
+                  {loading ? 'Sedang Menganalisis Data Medis...' : 'Mulai Analisis Kecerdasan Buatan'}
+                </button>
+              </div>
+
+              {/* SISI KANAN: PANEL OUTPUT DIAGNOSIS */}
+              <div className="space-y-6 lg:col-span-1">
+                <div className="rounded-[2.5rem] bg-white border border-slate-200/60 p-6 shadow-sm">
+                  <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">Analysis Output</p>
+                  <h3 className="mt-1 text-xl font-black text-slate-900 tracking-tight">Hasil Deteksi AI</h3>
+                  
+                  {result ? (
+                    <div className="mt-4 p-5 bg-gradient-to-b from-emerald-50 to-white text-emerald-800 border border-emerald-100 rounded-3xl flex items-start gap-3 shadow-inner">
+                      <CheckCircle2 size={22} className="text-emerald-500 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-wider text-emerald-600">Status Prediksi</p>
+                        <p className="text-base font-black mt-1 text-slate-900">{result.prediction}</p>
+                        <p className="text-[11px] text-slate-500 font-medium mt-1">Skor BMI Terkirim: <span className="font-bold text-blue-600">{result.computedBmi}</span></p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="mt-4 p-5 bg-slate-50 text-slate-400 border border-slate-100 rounded-3xl flex items-start gap-3">
+                      <Info size={18} className="text-slate-400 shrink-0 mt-0.5" />
+                      <p className="text-xs font-medium leading-relaxed">Silakan isi kartu indikator bento di sebelah kiri, kemudian luncurkan analisis untuk melihat kalkulasi risiko metabolisme Anda.</p>
+                    </div>
+                  )}
                 </div>
               </div>
 
-              <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
-                <h2 className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 mb-8 flex items-center gap-3">
-                  <div className="w-1.5 h-4 bg-blue-600 rounded-full"></div>
-                  Step 2: Diagnostic Data
-                </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-                  <InputField label="Glucose Level" name="glucose" value={formData.glucose} onChange={handleChange} placeholder="mg/dL" type="number" />
-                  <InputField label="Insulin Level" name="insulin" value={formData.insulin} onChange={handleChange} placeholder="mu U/ml" type="number" />
-                </div>
-              </div>
-
-              <button 
-                type="submit" 
-                disabled={isSubmitting}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg shadow-blue-100 flex items-center justify-center gap-3 transition-all active:scale-[0.98]"
-              >
-                {isSubmitting ? "Processing..." : "Run AI Risk Analysis"}
-                {!isSubmitting && <Send size={18} />}
-              </button>
-            </div>
-
-            {/* Sidebar Kanan */}
-            <div className="space-y-6">
-              <div className="bg-blue-600 rounded-2xl p-6 text-white shadow-xl shadow-blue-200 border border-blue-500">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="bg-white/20 p-2 rounded-lg"><Info size={20} /></div>
-                  <h3 className="font-bold text-sm uppercase tracking-wide">AI Guidelines</h3>
-                </div>
-                <p className="text-xs text-blue-100 leading-relaxed">
-                  Gunakan data medis terbaru. Pastikan satuan ukur sesuai dengan standar yang diminta sistem.
-                </p>
-              </div>
-
-              <div className="bg-white rounded-2xl border border-slate-200 p-6">
-                <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">Recent Tests</h3>
-                <div className="space-y-3">
-                  <RecentTestItem name="Sarah Miller" date="12 May 2024" status="High" color="text-red-600 bg-red-50 border border-red-100" />
-                  <RecentTestItem name="John Doe" date="11 May 2024" status="Low" color="text-green-600 bg-green-50 border border-green-100" />
-                </div>
-              </div>
-            </div>
-
-          </form>
+            </form>
+          </main>
         </div>
-      </main>
+
+      </div>
     </div>
   );
 }
