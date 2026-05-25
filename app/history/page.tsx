@@ -1,47 +1,9 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
-import {
-  Activity,
-  LayoutDashboard,
-  ShieldCheck,
-  Sparkles,
-  LogOut,
-  Search,
-  Calendar,
-  Scale,
-  AlertTriangle,
-  CheckCircle2,
-  Eye,
-  Menu,
-  X
-} from 'lucide-react';
-import Image from 'next/image';
-
-interface SidebarItemProps {
-  href: string;
-  icon: React.ElementType;
-  label: string;
-  active?: boolean;
-  onClick?: () => void;
-}
-
-const SidebarItem = ({ href, icon: Icon, label, active = false, onClick }: SidebarItemProps) => (
-  <Link
-    href={href}
-    onClick={onClick}
-    className={`flex items-center gap-3 rounded-2xl px-4 py-3.5 transition-all font-bold text-sm ${
-      active 
-        ? 'bg-blue-600 text-white shadow-md shadow-blue-200' 
-        : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
-    }`}
-  >
-    <Icon size={18} />
-    <span>{label}</span>
-  </Link>
-);
+import { Search, Calendar, Scale, AlertTriangle, CheckCircle2, Eye } from 'lucide-react';
+// Sesuaikan path import Sidebar ini jika berbeda letaknya
+import Sidebar from '../components/Sidebar'; 
 
 interface HistoryItem {
   id: string;
@@ -57,11 +19,8 @@ interface HistoryItem {
 }
 
 export default function HistoryPage() {
-  const pathname = usePathname();
-  const router = useRouter();
   const [searchTerm, setSearchTerm] = useState('');
   const [historyData, setHistoryData] = useState<HistoryItem[]>([]);
-  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   useEffect(() => {
     const defaultData: HistoryItem[] = [
@@ -81,11 +40,6 @@ export default function HistoryPage() {
     }
   }, []);
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    router.push('/login');
-  };
-
   const filteredData = historyData.filter(item => 
     item.id.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -94,46 +48,8 @@ export default function HistoryPage() {
     <div className="min-h-screen bg-[#F4F8FF] text-slate-900 font-sans selection:bg-blue-100">
       <div className="flex">
         
-        {/* MOBILE TOPBAR */}
-        <div className="md:hidden fixed top-4 left-4 right-4 z-40 flex items-center justify-between p-3 bg-white rounded-xl shadow-md">
-          <div className="flex items-center gap-3">
-            <Image src="/Logo%20Dialens%20AI.png" alt="DiaLens" height={32} width={32} className="h-8 w-auto rounded-md" />
-          </div>
-          <div className="flex items-center gap-2">
-            <button onClick={() => setMobileSidebarOpen(true)} className="p-2 rounded-lg bg-slate-100 hover:bg-slate-200">
-              <Menu size={18} />
-            </button>
-          </div>
-        </div>
-
-        {/* SIDEBAR NAVIGATION (DESKTOP) */}
-        <aside className="hidden md:fixed md:inset-y-0 md:left-0 md:w-64 md:flex md:flex-col bg-white border-r border-slate-100 p-6 md:justify-between z-30">
-          <div className="space-y-8">
-            <div className="flex items-center gap-3 px-2">
-              <div className="bg-blue-600 p-2 rounded-xl text-white shadow-md shadow-blue-100">
-                <Activity size={20} strokeWidth={3} />
-              </div>
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 leading-none">Welcome</p>
-                <h2 className="text-lg font-black text-slate-900 tracking-tight mt-1">DiaLens</h2>
-              </div>
-            </div>
-
-            <nav className="space-y-1.5 flex flex-col">
-              <SidebarItem href="/dashboard" icon={LayoutDashboard} label="Dashboard" active={pathname === '/dashboard'} />
-              <SidebarItem href="/check" icon={Activity} label="Check Kesehatan" active={pathname === '/check'} />
-              <SidebarItem href="/history" icon={ShieldCheck} label="History" active={pathname === '/history'} />
-              <SidebarItem href="/information" icon={Sparkles} label="Information" active={pathname === '/information'} />
-            </nav>
-          </div>
-
-          <div className="pt-4 border-t border-slate-100">
-            <button onClick={handleLogout} className="w-full flex items-center gap-3 rounded-2xl px-4 py-3.5 text-rose-600 font-bold text-sm hover:bg-rose-50 transition-all text-left">
-              <LogOut size={18} />
-              <span>Logout</span>
-            </button>
-          </div>
-        </aside>
+        {/* Panggil komponen Sidebar di sini */}
+        <Sidebar />
 
         {/* AREA PANEL KANAN */}
         <div className="md:pl-64 pt-20 md:pt-0 w-full">
@@ -186,70 +102,40 @@ export default function HistoryPage() {
                   <tbody className="divide-y divide-slate-100">
                     {filteredData.map((row, index) => (
                       <tr key={index} className="hover:bg-slate-50/50 transition-colors">
-                        
                         <td className="p-5">
                           <div className="font-black text-xs text-slate-900">{row.id}</div>
                           <div className="text-[10px] font-bold text-slate-400 mt-0.5 flex items-center gap-1">
                             <Calendar size={11} /> {row.date}
                           </div>
                         </td>
-
                         <td className="p-5">
                           <div className="text-xs font-bold text-slate-800">Umur: {row.age}</div>
-                          <div className="text-[10px] text-slate-500 mt-0.5 font-semibold">
-                            {row.weight} / {row.height}
-                          </div>
+                          <div className="text-[10px] text-slate-500 mt-0.5 font-semibold">{row.weight} / {row.height}</div>
                         </td>
-
                         <td className="p-5">
                           <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-sky-50 text-sky-700 border border-sky-100 text-xs font-black">
-                            <Scale size={12} />
-                            {row.bmi}
+                            <Scale size={12} /> {row.bmi}
                           </div>
                         </td>
-
                         <td className="p-5">
-                          <span className={`inline-block px-2.5 py-0.5 rounded-lg text-[10px] font-black uppercase ${
-                            row.highBP === 'Yes' 
-                              ? 'bg-rose-50 text-rose-600 border border-rose-100' 
-                              : 'bg-slate-100 text-slate-500'
-                          }`}>
-                            {row.highBP}
-                          </span>
+                          <span className={`inline-block px-2.5 py-0.5 rounded-lg text-[10px] font-black uppercase ${row.highBP === 'Yes' ? 'bg-rose-50 text-rose-600 border border-rose-100' : 'bg-slate-100 text-slate-500'}`}>{row.highBP}</span>
                         </td>
-
                         <td className="p-5">
-                          <span className={`inline-block px-2.5 py-0.5 rounded-lg text-[10px] font-black uppercase ${
-                            row.highChol === 'Yes' 
-                              ? 'bg-orange-50 text-orange-600 border border-orange-100' 
-                              : 'bg-slate-100 text-slate-500'
-                          }`}>
-                            {row.highChol}
-                          </span>
+                          <span className={`inline-block px-2.5 py-0.5 rounded-lg text-[10px] font-black uppercase ${row.highChol === 'Yes' ? 'bg-orange-50 text-orange-600 border border-orange-100' : 'bg-slate-100 text-slate-500'}`}>{row.highChol}</span>
                         </td>
-
                         <td className="p-5">
                           <div className="flex items-center gap-2">
                             {row.status === 'Danger' && <AlertTriangle size={14} className="text-rose-500" />}
                             {row.status === 'Warning' && <AlertTriangle size={14} className="text-amber-500" />}
                             {row.status === 'Safe' && <CheckCircle2 size={14} className="text-emerald-500" />}
-                            
-                            <span className={`text-xs font-black ${
-                              row.status === 'Danger' ? 'text-rose-600' :
-                              row.status === 'Warning' ? 'text-amber-600' : 'text-emerald-600'
-                            }`}>
-                              {row.prediction}
-                            </span>
+                            <span className={`text-xs font-black ${row.status === 'Danger' ? 'text-rose-600' : row.status === 'Warning' ? 'text-amber-600' : 'text-emerald-600'}`}>{row.prediction}</span>
                           </div>
                         </td>
-
                         <td className="p-5 text-center">
                           <button className="inline-flex items-center gap-1.5 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white border border-blue-100 rounded-xl px-3 py-1.5 text-xs font-bold transition-all shadow-sm">
-                            <Eye size={12} />
-                            <span>Detail</span>
+                            <Eye size={12} /> <span>Detail</span>
                           </button>
                         </td>
-
                       </tr>
                     ))}
                   </tbody>
@@ -259,36 +145,6 @@ export default function HistoryPage() {
 
           </main>
         </div>
-
-        {/* MOBILE SIDEBAR DRAWER */}
-        {mobileSidebarOpen && (
-          <div className="fixed inset-0 z-50">
-            <div className="absolute inset-0 bg-black/40" onClick={() => setMobileSidebarOpen(false)} />
-            <div className="absolute left-0 top-0 bottom-0 w-72 bg-white p-6">
-              <div className="flex items-center justify-between">
-                <div />
-                <button onClick={() => setMobileSidebarOpen(false)} className="p-2 rounded-lg">
-                  <X size={18} />
-                </button>
-              </div>
-
-              <nav className="mt-6 space-y-2.5 flex flex-col">
-                <SidebarItem href="/dashboard" icon={LayoutDashboard} label="Dashboard" active={pathname === '/dashboard'} onClick={() => setMobileSidebarOpen(false)} />
-                <SidebarItem href="/check" icon={Activity} label="Check Kesehatan" active={pathname === '/check'} onClick={() => setMobileSidebarOpen(false)} />
-                <SidebarItem href="/history" icon={ShieldCheck} label="History" active={pathname === '/history'} onClick={() => setMobileSidebarOpen(false)} />
-                <SidebarItem href="/information" icon={Sparkles} label="Information" active={pathname === '/information'} onClick={() => setMobileSidebarOpen(false)} />
-              </nav>
-
-              <div className="pt-6 border-t border-slate-100">
-                <button onClick={() => { setMobileSidebarOpen(false); handleLogout(); }} className="w-full flex items-center gap-3 rounded-2xl px-4 py-3.5 text-rose-600 font-bold text-sm hover:bg-rose-50 transition-all text-left">
-                  <LogOut size={18} />
-                  <span>Logout</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
       </div>
     </div>
   );
