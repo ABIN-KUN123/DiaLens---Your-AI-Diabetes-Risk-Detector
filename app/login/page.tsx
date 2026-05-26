@@ -38,9 +38,8 @@ export default function LoginPage() {
     setError('');
 
     try {
-      // Menembak endpoint login sesuai dengan routes backend kamu
-      // Catatan: Jika domain/port berbeda, sesuaikan misal 'http://localhost:5000/api/health/login'
-      const response = await fetch('http://localhost:5000/api/health/login', {
+      // Integrasi langsung dengan URL API backend Vercel kamu
+      const response = await fetch('https://dia-lens-backend.vercel.app/api/health/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -55,7 +54,7 @@ export default function LoginPage() {
         throw new Error(data.message || 'Gagal masuk. Silakan periksa kredensial Anda.');
       }
 
-      // JIKA BERHASIL: Simpan token autentikasi ke localStorage
+      // LOGIN BERHASIL: Simpan token autentikasi ke localStorage
       localStorage.setItem('token', data.token);
       localStorage.setItem('refreshToken', data.refreshToken);
       localStorage.setItem('user', JSON.stringify(data.user));
@@ -241,6 +240,7 @@ export default function LoginPage() {
             <div className="grid grid-cols-2 gap-4">
               <button
                 type="button"
+                onClick={() => setError('Autentikasi pihak ketiga Google belum dikonfigurasi di backend.')}
                 className="border border-sky-200 rounded-xl py-2.5 flex items-center justify-center gap-2 text-xs font-semibold text-slate-700 hover:bg-sky-100 transition-all"
               >
                 <span className="w-6 h-6 bg-sky-100 rounded-full flex items-center justify-center font-bold text-[10px] text-sky-700">G</span>
@@ -248,6 +248,7 @@ export default function LoginPage() {
               </button>
               <button
                 type="button"
+                onClick={() => setError('Autentikasi pihak ketiga Apple belum dikonfigurasi di backend.')}
                 className="border border-sky-200 rounded-xl py-2.5 flex items-center justify-center gap-2 text-xs font-semibold text-slate-700 hover:bg-sky-100 transition-all"
               >
                 <span className="w-6 h-6 bg-sky-900 rounded-full flex items-center justify-center font-bold text-[8px] text-white">A</span>
