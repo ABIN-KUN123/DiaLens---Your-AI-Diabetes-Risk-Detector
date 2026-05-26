@@ -44,7 +44,7 @@ export default function HistoryPage() {
       setHistoryData(JSON.parse(stored));
     } else {
       localStorage.setItem('medicalHistory', JSON.stringify(defaultData));
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+      
       setHistoryData(defaultData);
     }
   }, []);
